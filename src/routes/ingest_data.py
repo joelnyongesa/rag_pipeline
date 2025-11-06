@@ -1,3 +1,11 @@
+"""This module defines the API routes for ingesting data files and querying the vector store."""
+
+from uuid import uuid4
+from typing import List, Union
+import os
+
+from dotenv import load_dotenv
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel, Field
 
@@ -11,10 +19,7 @@ from qdrant_client.models import VectorParams, Distance
 
 from src.models.response import Success, Error
 
-from uuid import uuid4
-from typing import List, Union
-import os
-from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -54,6 +59,7 @@ vector_store = QdrantVectorStore(
 
 # Query model
 class QueryRequest(BaseModel):
+    """Model for query requests."""
     query: str = Field(..., description="Natural language query to search the vector store")
     k:int = Field(5, ge=1, le=50, description="Number of top results to return")
 
@@ -61,13 +67,13 @@ class QueryRequest(BaseModel):
 # File ingestion endpoint
 @ingest_router.post("/ingest", tags=["ingest"], response_model=Union[Success, Error], status_code=200)
 async def ingest(files: List[UploadFile] = File(...)):
+    """Endpoint to ingest files into the vector store."""
     try:
         results = []
 
         for uploaded_file in files:
             filename = uploaded_file.filename
-            extension = os.path.splitext(filename)[1].lower()
-            
+            extension = os.path.splitext(filename)[1].lower()           
             if extension not in ALLOWED_EXTENSIONS:
                 raise HTTPException(status_code=400, detail=f"File type {extension} not allowed.")
 
@@ -88,8 +94,8 @@ async def ingest(files: List[UploadFile] = File(...)):
             elif extension == ".txt":
                 loader = TextLoader(file_path)
             else:
-                raise HTTPException(status_code=400, detail=f"No loader available for {extension} files.")
-            
+                raise HTTPException(
+                    status_code=400, detail=f"No loader available for {extension} files.")        
             documents = loader.load()
 
             # Split and embed
@@ -101,15 +107,14 @@ async def ingest(files: List[UploadFile] = File(...)):
 
             results.append({"filename": filename, "ids": response_ids})
 
-        return Success(message="Files ingested successfully", data={"files": results})
-    
+        return Success(message="Files ingested successfully", data={"files": results})   
     except Exception as e:
-        return Error(message="Error ingesting files", error=str(e))
-    
+        return Error(message="Error ingesting files", error=str(e))  
 
 # Query endpoint
 @ingest_router.post("/query", tags=["query"], response_model=Union[Success, Error], status_code=200)
 async def query_vector_store(request: QueryRequest):
+    """Endpoint to query the vector store."""
     try:
         docs_and_scores = vector_store.similarity_search_with_score(request.query, k=request.k)
         results = [
