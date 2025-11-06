@@ -36,7 +36,12 @@ os.makedirs(DATA_DIR, exist_ok=True)
 # Normalizing .env values to avoid issues like trailing quotes or slashes
 _qdrant_url_raw = os.getenv("QDRANT_URL")
 _qdrant_url = (
-    _qdrant_url_raw.strip().strip("'").strip('"').rstrip("/") if _qdrant_url_raw else None
+    _qdrant_url_raw
+    .strip()
+    .strip("'")
+    .strip('"')
+    .rstrip("/")
+      if _qdrant_url_raw else None
 )
 
 _api_key_raw = os.getenv("QDRANT_API_KEY")
@@ -65,12 +70,16 @@ class QueryRequest(BaseModel):
 
 
 # File ingestion endpoint
-@ingest_router.post("/ingest", tags=["ingest"], response_model=Union[Success, Error], status_code=200)
+@ingest_router.post(
+        "/ingest", 
+        tags=["ingest"], 
+        response_model=Union[Success, Error], 
+        status_code=200
+        )
 async def ingest(files: List[UploadFile] = File(...)):
     """Endpoint to ingest files into the vector store."""
     try:
         results = []
-
         for uploaded_file in files:
             filename = uploaded_file.filename
             extension = os.path.splitext(filename)[1].lower()           
@@ -130,7 +139,6 @@ async def query_vector_store(request: QueryRequest):
             success=True,
             message="Query executed successfully",
             data={"results": results}
-        )
-    
+        )    
     except Exception as e:
         return Error(message="Error executing query", error=str(e))
